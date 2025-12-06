@@ -1,0 +1,28 @@
+# TEMPLATE: Copy this file to your cloned repository as .github/workflows/build.yml
+# Replace 'your-org' with your GitHub organization name
+# NOTE: This references private reusable workflows - ensure your repository has access
+
+name: Build and Test Maven Project
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-test-and-notify:
+    uses: mu-university/autocode-reusable-workflows/.github/workflows/maven-build-test.yml@main
+    with:
+      java-version: '17'
+      java-distribution: 'temurin'
+      artifact-name: 'test-results'
+      webhook-url: 'https://eshonkulov-asliddin.jprq.live/workflow/results'
+      # Template repository configuration
+      template-repo: 'mu-university/oop-lab1-java'  # Repository containing test files
+      template-tests-path: 'src/test/java'                # Path to tests in template
+      template-ref: 'master'                                 # Branch/tag to use
+    secrets:
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+      TEMPLATE_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Or use a PAT for private repos

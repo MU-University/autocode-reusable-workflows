@@ -1,0 +1,151 @@
+name: Reusable Maven Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: 'Java version to use'
+        required: false
+        type: string
+        default: '17'
+      java-distribution:
+        description: 'Java distribution to use'
+        required: false
+        type: string
+        default: 'temurin'
+      artifact-name:
+        description: 'Name for the test results artifact'
+        required: false
+        type: string
+        default: 'test-results'
+      webhook-url:
+        description: 'Webhook URL for notifications'
+        required: false
+        type: string
+        default: ''
+      template-repo:
+        description: 'Template repository containing tests (e.g., your-org/template-repo)'
+        required: false
+        type: string
+        default: ''
+      template-tests-path:
+        description: 'Path to tests in template repo (e.g., src/test/java)'
+        required: false
+        type: string
+        default: 'src/test/java'
+      template-ref:
+        description: 'Branch/tag/commit to checkout from template repo'
+        required: false
+        type: string
+        default: 'main'
+    secrets:
+      WEBHOOK_URL:
+        description: 'Webhook URL (as secret)'
+        required: false
+      TEMPLATE_REPO_TOKEN:
+        description: 'Token to access template repository (if private)'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout student repository
+      uses: actions/checkout@v4
+      with:
+        path: student-repo
+
+    - name: Checkout template repository with tests
+      if: inputs.template-repo != ''
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.template-repo }}
+        ref: ${{ inputs.template-ref }}
+        token: ${{ secrets.TEMPLATE_REPO_TOKEN || github.token }}
+        path: template-repo
+
+    - name: Copy tests from template to student repo
+      if: inputs.template-repo != ''
+      run: |
+        echo "Copying tests from template-repo/${{ inputs.template-tests-path }} to student-repo/${{ inputs.template-tests-path }}"
+        mkdir -p student-repo/${{ inputs.template-tests-path }}
+        cp -r template-repo/${{ inputs.template-tests-path }}/* student-repo/${{ inputs.template-tests-path }}/
+        echo "Tests copied successfully"
+        ls -la student-repo/${{ inputs.template-tests-path }}
+
+    - name: Set working directory
+      run: cd student-repo
+
+    - name: Set up JDK ${{ inputs.java-version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: ${{ inputs.java-distribution }}
+        cache: maven
+
+    - name: Build with Maven
+      id: build
+      working-directory: ./student-repo
+      run: mvn -B compile --file pom.xml
+
+    - name: Generate Build Error Report
+      if: failure()
+      working-directory: ./student-repo
+      run: |
+        echo "Build outcome: ${{ steps.build.outcome }}"
+        mkdir -p target/surefire-reports
+        echo '<?xml version="1.0" encoding="UTF-8"?>' > target/surefire-reports/test-results.xml
+        echo '  <testsuite name="Build Error" time="0" tests="1" errors="1" skipped="0" failures="1">' >> target/surefire-reports/test-results.xml
+        echo '    <testcase name="Build" classname="" time="0">' >> target/surefire-reports/test-results.xml
+        echo '      <failure type="Compilation Error"><![CDATA[' >> target/surefire-reports/test-results.xml
+        echo '      ]]></failure>' >> target/surefire-reports/test-results.xml
+        echo '    </testcase>' >> target/surefire-reports/test-results.xml
+        echo '  </testsuite>' >> target/surefire-reports/test-results.xml
+
+    - name: Run Tests with Maven
+      id: test
+      working-directory: ./student-repo
+      run: |
+        mvn clean
+        mvn -B test --file pom.xml
+
+    - name: Upload a Build Artifact
+      if: always()
+      uses: actions/upload-artifact@v4.3.5
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: student-repo/target/surefire-reports/*.xml
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: build
+    if: always() && (inputs.webhook-url != '' || secrets.WEBHOOK_URL != '')
+
+    steps:
+    - name: Notify completion
+      run: |
+        WEBHOOK_URL="${{ secrets.WEBHOOK_URL }}"
+        if [ -z "$WEBHOOK_URL" ]; then
+          WEBHOOK_URL="${{ inputs.webhook-url }}"
+        fi
+
+        STATUS="completed"
+        if [ "${{ needs.build.result }}" != "success" ]; then
+          STATUS="failed"
+        fi
+
+        curl -X POST "$WEBHOOK_URL" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"status\": \"$STATUS\",
+            \"repository\": {
+              \"name\": \"${{ github.repository }}\",
+              \"owner\": \"${{ github.repository_owner }}\"
+            },
+            \"branch\": \"${{ github.ref_name }}\",
+            \"commit\": \"${{ github.sha }}\",
+            \"runId\": \"${{ github.run_id }}\",
+            \"runNumber\": \"${{ github.run_number }}\",
+            \"conclusion\": \"${{ needs.build.result }}\"
+          }"
