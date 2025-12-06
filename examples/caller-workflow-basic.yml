@@ -1,0 +1,19 @@
+# Example: Basic Maven Build and Test Workflow
+# Place this file in your repository at: .github/workflows/build.yml
+
+name: Maven Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    uses: your-org/autocode-reusable-workflows/.github/workflows/maven-build-test.yml@main
+    with:
+      java-version: '17'
+      java-distribution: 'temurin'
+      artifact-name: 'test-results'
+

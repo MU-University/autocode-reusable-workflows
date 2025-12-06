@@ -84,29 +84,31 @@ jobs:
 
     - name: Build with Maven
       id: build
+      continue-on-error: true
       working-directory: student-repo
       run: mvn -B compile
 
     - name: Generate Build Error Report
-      if: failure()
+      if: steps.build.outcome == 'failure'
       working-directory: student-repo
       run: |
-        echo "Build outcome: ${{ steps.build.outcome }}"
+        echo "Build failed, generating error report"
         mkdir -p target/surefire-reports
         echo '<?xml version="1.0" encoding="UTF-8"?>' > target/surefire-reports/test-results.xml
+        echo '<testsuites>' >> target/surefire-reports/test-results.xml
         echo '  <testsuite name="Build Error" time="0" tests="1" errors="1" skipped="0" failures="1">' >> target/surefire-reports/test-results.xml
-        echo '    <testcase name="Build" classname="" time="0">' >> target/surefire-reports/test-results.xml
-        echo '      <failure type="Compilation Error"><![CDATA[' >> target/surefire-reports/test-results.xml
-        echo '      ]]></failure>' >> target/surefire-reports/test-results.xml
+        echo '    <testcase name="Build" classname="BuildError" time="0">' >> target/surefire-reports/test-results.xml
+        echo '      <failure type="Compilation Error"><![CDATA[Maven build failed. Check the build logs for compilation errors.]]></failure>' >> target/surefire-reports/test-results.xml
         echo '    </testcase>' >> target/surefire-reports/test-results.xml
         echo '  </testsuite>' >> target/surefire-reports/test-results.xml
+        echo '</testsuites>' >> target/surefire-reports/test-results.xml
 
     - name: Run Tests with Maven
       id: test
+      if: steps.build.outcome == 'success'
+      continue-on-error: true
       working-directory: student-repo
-      run: |
-        mvn clean
-        mvn -B test
+      run: mvn -B test
 
     - name: Upload a Build Artifact
       if: always()
