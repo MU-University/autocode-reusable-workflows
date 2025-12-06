@@ -74,24 +74,22 @@ jobs:
         echo "Tests copied successfully"
         ls -la student-repo/${{ inputs.template-tests-path }}
 
-    - name: Set working directory
-      run: cd student-repo
-
     - name: Set up JDK ${{ inputs.java-version }}
       uses: actions/setup-java@v4
       with:
         java-version: ${{ inputs.java-version }}
         distribution: ${{ inputs.java-distribution }}
         cache: maven
+        cache-dependency-path: 'student-repo/pom.xml'
 
     - name: Build with Maven
       id: build
-      working-directory: ./student-repo
-      run: mvn -B compile --file pom.xml
+      working-directory: student-repo
+      run: mvn -B compile
 
     - name: Generate Build Error Report
       if: failure()
-      working-directory: ./student-repo
+      working-directory: student-repo
       run: |
         echo "Build outcome: ${{ steps.build.outcome }}"
         mkdir -p target/surefire-reports
@@ -105,10 +103,10 @@ jobs:
 
     - name: Run Tests with Maven
       id: test
-      working-directory: ./student-repo
+      working-directory: student-repo
       run: |
         mvn clean
-        mvn -B test --file pom.xml
+        mvn -B test
 
     - name: Upload a Build Artifact
       if: always()
