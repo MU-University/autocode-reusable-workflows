@@ -12,13 +12,13 @@ Builds and tests a Maven project, then sends a notification webhook upon complet
 - `java-version` (optional, default: '17'): Java version to use
 - `java-distribution` (optional, default: 'temurin'): Java distribution
 - `artifact-name` (optional, default: 'test-results'): Name for test results artifact
-- `webhook-url` (optional): Webhook URL for completion notifications
+- `webhook-url` (optional): Webhook URL for completion notifications (required for notifications)
 - `template-repo` (optional): Template repository containing test files (e.g., 'your-org/template-repo')
 - `template-tests-path` (optional, default: 'src/test/java'): Path to tests in template repository
 - `template-ref` (optional, default: 'main'): Branch/tag/commit to checkout from template repo
 
 **Secrets:**
-- `WEBHOOK_URL` (optional): Alternative way to provide webhook URL securely (recommended)
+- `WEBHOOK_URL` (optional): Webhook URL securely provided (takes precedence over input)
 - `TEMPLATE_REPO_TOKEN` (optional): Token to access private template repository
 
 **Features:**
@@ -135,7 +135,10 @@ jobs:
     uses: your-org/autocode-reusable-workflows/.github/workflows/maven-build-test.yml@main
     with:
       java-version: '17'
+      template-repo: 'your-org/java-assignment-template'
 ```
+
+**Note:** The notification job will run but skip sending if neither `webhook-url` input nor `WEBHOOK_URL` secret is provided.
 
 ## Template Repository Setup
 
