@@ -79,20 +79,90 @@ jobs:
       with:
         java-version: ${{ inputs.java-version }}
         distribution: ${{ inputs.java-distribution }}
-        cache: maven
-        cache-dependency-path: 'student-repo/pom.xml'
+
+    - name: Print Repository Structure
+      working-directory: student-repo
+      run: |
+        echo "======================================"
+        echo "📁 PROJECT STRUCTURE"
+        echo "======================================"
+        echo ""
+        echo "📂 Root directory contents:"
+        ls -la
+        echo ""
+        echo "📂 Full directory tree:"
+        find . -type f -not -path '*/\.*' | head -50
+        echo ""
+        echo "☕ Java source files:"
+        find src -name "*.java" -type f 2>/dev/null || echo "No src directory found"
+        echo ""
+        echo "🧪 Test files:"
+        find src/test -name "*.java" -type f 2>/dev/null || echo "No test directory found"
+        echo ""
+        echo "======================================"
+
+    - name: Verify Maven project structure
+      working-directory: student-repo
+      run: |
+        echo "======================================"
+        echo "✅ MAVEN PROJECT VERIFICATION"
+        echo "======================================"
+        echo ""
+        echo "Checking for pom.xml..."
+        if [ ! -f "pom.xml" ]; then
+          echo "❌ ERROR: pom.xml not found in student repository"
+          echo "This workflow requires a Maven project with a pom.xml file"
+          echo ""
+          echo "Current directory contents:"
+          ls -la
+          exit 1
+        fi
+        echo "✅ pom.xml found successfully"
+        echo ""
+        echo "📄 POM.xml content preview:"
+        head -20 pom.xml
+        echo ""
+        echo "======================================"
+
+    - name: Cache Maven packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
 
     - name: Build with Maven
       id: build
       continue-on-error: true
       working-directory: student-repo
-      run: mvn -B compile
+      run: |
+        echo "======================================"
+        echo "🔨 BUILDING PROJECT"
+        echo "======================================"
+        echo ""
+        mvn -B compile
+        BUILD_RESULT=$?
+        echo ""
+        echo "======================================"
+        if [ $BUILD_RESULT -eq 0 ]; then
+          echo "✅ Build completed successfully"
+          echo ""
+          echo "📦 Compiled classes:"
+          find target/classes -name "*.class" 2>/dev/null | head -20
+        else
+          echo "❌ Build failed with exit code: $BUILD_RESULT"
+        fi
+        echo "======================================"
+        exit $BUILD_RESULT
 
     - name: Generate Build Error Report
       if: steps.build.outcome == 'failure'
       working-directory: student-repo
       run: |
-        echo "Build failed, generating error report"
+        echo "======================================"
+        echo "❌ GENERATING BUILD ERROR REPORT"
+        echo "======================================"
         mkdir -p target/surefire-reports
         echo '<?xml version="1.0" encoding="UTF-8"?>' > target/surefire-reports/test-results.xml
         echo '<testsuites>' >> target/surefire-reports/test-results.xml
@@ -108,7 +178,53 @@ jobs:
       if: steps.build.outcome == 'success'
       continue-on-error: true
       working-directory: student-repo
-      run: mvn -B test
+      run: |
+        echo "======================================"
+        echo "🧪 RUNNING TESTS"
+        echo "======================================"
+        echo ""
+        echo "Test files to be executed:"
+        find src/test -name "*Test.java" -o -name "*Tests.java" 2>/dev/null
+        echo ""
+        mvn -B test
+        TEST_RESULT=$?
+        echo ""
+        echo "======================================"
+        if [ $TEST_RESULT -eq 0 ]; then
+          echo "✅ All tests passed"
+        else
+          echo "❌ Some tests failed (exit code: $TEST_RESULT)"
+        fi
+        echo ""
+        echo "📊 Test Results Summary:"
+        if [ -d "target/surefire-reports" ]; then
+          echo "Test report files generated:"
+          ls -lh target/surefire-reports/
+          echo ""
+          echo "Test summary from XML reports:"
+          grep -h "testsuite" target/surefire-reports/*.xml 2>/dev/null | head -5 || echo "No test results found"
+        fi
+        echo "======================================"
+        exit $TEST_RESULT
+
+    - name: Show Test Results Before Upload
+      if: always()
+      working-directory: student-repo
+      run: |
+        echo "======================================"
+        echo "📤 PREPARING TEST ARTIFACTS"
+        echo "======================================"
+        echo ""
+        if [ -d "target/surefire-reports" ]; then
+          echo "Test report files to upload:"
+          ls -lh target/surefire-reports/*.xml 2>/dev/null || echo "No XML files found"
+          echo ""
+          echo "Total report files:"
+          find target/surefire-reports -name "*.xml" | wc -l
+        else
+          echo "⚠️ No surefire-reports directory found"
+        fi
+        echo "======================================"
 
     - name: Upload a Build Artifact
       if: always()

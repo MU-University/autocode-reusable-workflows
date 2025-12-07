@@ -1,7 +1,3 @@
-# TEMPLATE: Copy this file to your cloned repository as .github/workflows/build.yml
-# Replace 'your-org' with your GitHub organization name
-# NOTE: This references private reusable workflows - ensure your repository has access
-
 name: Build and Test Maven Project
 
 on:
