@@ -28,6 +28,6 @@ jobs:
               },
               "branch": "${{ github.ref_name }}",
               "commit": "${{ github.sha }}",
-              "runId": "${{ github.run_id }}",
-              "runNumber": "${{ github.run_number }}"
+              "runId": "${{ github.event.workflow_run.id }}",
+              "runNumber": "${{ github.event.workflow_run.run_number }}"
             }'
