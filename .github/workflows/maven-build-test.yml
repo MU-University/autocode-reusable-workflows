@@ -18,12 +18,32 @@ on:
         required: false
         type: string
         default: 'test-results'
+      assignment-id:
+        description: 'Assignment ID (used as suffix for template repo)'
+        required: true
+        type: string
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout student code
+        uses: actions/checkout@v4
+        with:
+          path: student
+
+      - name: Checkout template tests
+        uses: actions/checkout@v4
+        with:
+          repository: mu-university/oop-lab${{ inputs.assignment-id }}-java
+          ref: master
+          path: template
+
+      - name: Replace student tests with template tests
+        run: |
+          rm -rf student/src/test
+          cp -r template/src/test student/src/test
+          echo "✅ Loaded tests from mu-university/oop-lab${{ inputs.assignment-id }}-lab"
 
       - name: Set up JDK ${{ inputs.java-version }}
         uses: actions/setup-java@v4
@@ -34,10 +54,12 @@ jobs:
 
       - name: Build with Maven
         id: build
+        working-directory: student
         run: mvn -B compile --file pom.xml
 
       - name: Generate Build Error Report
         if: failure()
+        working-directory: student
         run: |
           mkdir -p target/surefire-reports
           cat <<EOF > target/surefire-reports/test-results.xml
@@ -51,6 +73,7 @@ jobs:
 
       - name: Run Tests with Maven
         id: test
+        working-directory: student
         run: |
           mvn clean
           mvn -B test --file pom.xml
@@ -60,4 +83,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifact-name }}
-          path: target/surefire-reports/*.xml
+          path: student/target/surefire-reports/*.xml
