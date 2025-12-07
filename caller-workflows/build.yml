@@ -1,0 +1,18 @@
+name: Build and Test Maven Project
+
+on:
+  workflow_dispatch:
+
+# NOTE: For private reusable workflows, the caller repo must be in the SAME organization
+# and the reusable workflow repo must enable: Settings → Actions → General → Access →
+# "Accessible from repositories in the organization"
+
+jobs:
+  build-and-test:
+    uses: YOUR_ORG/autocode-reusable-workflows/.github/workflows/maven-build-test.yml@main
+    with:
+      webhook-url: 'https://eshonkulov-asliddin.jprq.live/workflow/results'
+      # Optional: override other defaults
+      # java-version: '21'
+      # artifact-name: 'my-test-results'
+
