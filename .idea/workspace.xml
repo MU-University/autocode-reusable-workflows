@@ -5,8 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b527df70-6a66-4390-b413-c9b59de41980" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/maven-build-test.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/template-caller.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/copilotDiffState.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilotDiffState.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -1,0 +1,33 @@
+name: Notify Completion (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      webhook-url:
+        description: 'Webhook URL to notify on completion'
+        required: true
+        type: string
+      build-status:
+        description: 'Status from the build job'
+        required: true
+        type: string
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Completion
+        run: |
+          curl -X POST "${{ inputs.webhook-url }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "status": "${{ inputs.build-status }}",
+              "repository": {
+                "name": "${{ github.repository }}",
+                "owner": "${{ github.repository_owner }}"
+              },
+              "branch": "${{ github.ref_name }}",
+              "commit": "${{ github.sha }}",
+              "runId": "${{ github.run_id }}",
+              "runNumber": "${{ github.run_number }}"
+            }'
